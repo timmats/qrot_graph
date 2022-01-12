@@ -1,0 +1,69 @@
+using OptimalTransport
+using Plots
+using LinearAlgebra
+using Random
+using Distributions
+using Distances
+
+## Try the example of Landa et al.
+n = 1_000
+θ_vals = collect(range(-π, π; length = n))
+X = hcat([[cos(θ), sin(θ)] for θ in θ_vals]...)
+scatter(X[1, :], X[2, :])
+m = 10_000
+# too slow
+# X_embed = qr(randn(m, m)).Q[:, 1:2] * X
+
+u = randn(m)
+v = randn(m)
+u = u .- dot(u, v/norm(v))*(v/norm(v))
+R = hcat(u/norm(u), v/norm(v))
+X_embed = R * X
+
+α = rand(Uniform(0.05, 0.5), m)
+β = rand(Uniform(0.05, 0.5), n)
+
+σ = @. sqrt(α * β' / m)
+η = randn(m, n).*σ
+
+X_embed_noisy = X_embed + 0.5η
+
+scatter(X_embed_noisy[1, :], X_embed_noisy[2, :])
+
+function form_kernel(X, ε)
+    C = pairwise(SqEuclidean(), X, X)
+    K = exp.(-C/ε)
+    K[diagind(K)] .= 0
+    K
+end
+
+function norm_kernel(K, type)
+    W = K
+    if type == :unnorm
+        # do nothing
+    elseif type == :row
+        W .= K ./ reshape(sum(K; dims = 2), :, 1)
+    elseif type == :sym
+        r = sum(K; dims = 2)
+        W .= K .* sqrt.(1f0 ./reshape(r, :, 1)) .* sqrt.(1f0 ./reshape(r, 1, :))
+    end
+    W
+end
+
+ε = 0.25
+K = form_kernel(X_embed, ε)
+K_noisy = form_kernel(X_embed_noisy, ε)
+
+kernel_ot_ent = (X, ε) -> sinkhorn(ones(n), ones(n), pairwise(SqEuclidean(), X, X), ε)
+W_noisy_ent = kernel_ot_ent(X_embed_noisy, ε)
+
+W = norm_kernel(K, :row)
+W_noisy = norm_kernel(K_noisy, :row)
+
+norm(W_noisy - W)
+norm(W_noisy_ent - kernel_ot_ent(X, ε))
+
+idx = randperm(length(vec(W)))[1:10_000]
+plot(scatter(vec(W)[idx], vec(W_noisy_ent)[idx], alpha = 0.1),
+     scatter(vec(W)[idx], vec(W_noisy)[idx], alpha = 0.1))
+
