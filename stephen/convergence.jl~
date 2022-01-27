@@ -1,0 +1,76 @@
+using Pkg
+Pkg.activate(".")
+using OptimalTransport
+using Distances
+using StatsBase
+using LinearAlgebra
+using Plots
+using Laplacians
+
+ENV["JULIA_DEBUG"] = ""
+
+function get_cost(X; diag_inf = false)
+    C = pairwise(SqEuclidean(), X, X)
+    if diag_inf
+        C[diagind(C)] .= Inf
+    end
+    mean_norm(C)
+end
+
+mean_norm(x) = x ./ mean(x)
+
+symm(A) = 0.5*(A.+A')
+kernel_ot_ent = (X, ε; diag_inf = false, rtol = 1e-6, atol = 1e-9) -> symm(sinkhorn(ones(size(X, 2)), get_cost(X; diag_inf = diag_inf), ε, OptimalTransport.SymmetricSinkhornGibbs(); maxiter = 5_000, rtol = rtol, atol = atol))
+kernel_ot_quad = (X, ε; diag_inf = false, rtol = 1e-6, atol = 1e-9) -> symm(quadreg(ones(size(X, 2)), get_cost(X; diag_inf = diag_inf), ε, OptimalTransport.SymmetricQuadraticOTNewton(); maxiter = 100, atol = atol, rtol = rtol))
+
+function knn_adj(X, k)
+    indices, _ = knn_matrices(nndescent(X, k, Euclidean())); 
+    A = spzeros(size(X, 2), size(X, 2));
+    @inbounds for i = 1:size(A, 1)
+        @inbounds for j in indices[:, i]
+            A[i, j] = 1
+        end
+    end
+    return A
+end
+
+function form_kernel(X, ε; k = Inf)
+    C = get_cost(X) 
+    K = exp.(-C/ε)
+    if k < Inf
+        K .= K .* knn_adj(X, k)
+    end
+    # K[diagind(K)] .= 0
+    symm(K)
+end
+
+function norm_kernel(K, type)
+    W = K
+    if type == :unnorm
+        # do nothing
+    elseif type == :row
+        W .= K ./ reshape(sum(K; dims = 2), :, 1)
+    elseif type == :sym
+        r = sum(K; dims = 2)
+        W .= K .* sqrt.(1f0 ./reshape(r, :, 1)) .* sqrt.(1f0 ./reshape(r, 1, :))
+    end
+    W
+end
+
+x = reshape(collect(range(-1, 1; length = 250)), 1, :)
+l = x[2]-x[1]
+
+L = SymTridiagonal(fill(-2.0, length(x)), ones(length(x)-1))
+
+ε = 1.0
+L_ent = (I - kernel_ot_ent(x, ε; atol = 0, rtol = 0))/ε
+plot(real.(eigen(L_ent).vectors[:, 1:5]))
+
+ε = 1.0
+L_row = (I - norm_kernel(form_kernel(x, ε), :row))/ε
+plot(real.(eigen(L_row).vectors[:, 1:5]))
+
+ε = 1.0
+L_quad = (I - kernel_ot_quad(x, ε; atol = 0, rtol = 0))
+
+plot(eigen(L_quad).vectors[:, 1:5])

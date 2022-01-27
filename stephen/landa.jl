@@ -8,7 +8,7 @@ X = hcat([[cos(θ), sin(θ)] for θ in θ_vals]...)
 # Y = hcat([[cos(θ), sin(θ)] for θ in ϕ_vals]...)
 # X = hcat(X, 0.75*Y .+ 0.5*0.25/sqrt(2))
 scatter(X[1, :], X[2, :])
-m = 500
+m = 10_000
 # too slow
 # X_embed = qr(randn(m, m)).Q[:, 1:2] * X
 # generate R 
@@ -17,7 +17,6 @@ v = randn(m)
 u = u .- dot(u, v/norm(v))*(v/norm(v))
 R = hcat(u/norm(u), v/norm(v))
 X_embed = R * X
-
 
 scatter(X_embed[1, :], X_embed[2, :])
 
@@ -71,16 +70,21 @@ mean(pairwise(SqEuclidean(), X_embed_noisy, X_embed_noisy))
 W_simple_all = [norm_kernel(form_kernel(X_embed_noisy, ε), :row) for ε in ε_all]
 W_ent_all = [kernel_ot_ent(X_embed_noisy, ε)  for ε in ε_all]
 
-plt_simple = plot([scatter(collect(eachcol(real.(eigen(W).vectors[:, end-2:end-1])))...; title = "ε = $(round(ε; digits = 3))", markersize = 1) for (W, ε) in zip(W_simple_all, ε)]...)
+plt_simple = plot([scatter(collect(eachcol(real.(eigen(W).vectors[:, end-2:end-1])))...; title = "ε = $(round(ε; digits = 3))", markersize = 1) for (W, ε) in zip(W_simple_all, ε_all)]...)
 
-plt_ent = plot([scatter(collect(eachcol(real.(eigen(W).vectors[:, end-2:end-1])))...; title = "ε = $(round(ε; digits = 3))", markersize = 1) for (W, ε) in zip(W_ent_all, ε)]...)
+plt_ent = plot([scatter(collect(eachcol(real.(eigen(W).vectors[:, end-2:end-1])))...; title = "ε = $(round(ε; digits = 3))", markersize = 1) for (W, ε) in zip(W_ent_all, ε_all)]...)
 
 ε_quad_all = 10f0.^collect(range(0, 1; length = 10))
 W_quad_all = [kernel_ot_quad(X_embed_noisy, ε) for ε in ε_quad_all]
 
-plt_quad = plot([scatter(collect(eachcol(real.(eigen(W).vectors[:, end-2:end-1])))...; title = "ε = $(round(ε; digits = 3))", markersize = 1) for (W, ε) in zip(W_quad_all, ε)]...)
+plt_quad = plot([scatter(collect(eachcol(real.(eigen(W).vectors[:, end-2:end-1])))...; title = "ε = $(round(ε; digits = 3))", markersize = 1) for (W, ε) in zip(W_quad_all, ε_quad_all)]...)
 
 scatter(collect(eachcol(eigen(W_quad_all[end-2]).vectors[:, end-2:end-1]))...; markersize = 1)
+
+Plots.plot(
+    scatter(θ_vals, eigen(W_quad_all[end-2]).vectors[:, end-3:end-1]; markersize = 1, markerstrokewidth = 0), 
+    scatter(θ_vals, eigen(W_ent_all[end-3]).vectors[:, end-3:end-1]; markersize = 1, markerstrokewidth = 0), 
+    scatter(θ_vals, eigen(W_simple_all[end-3]).vectors[:, end-3:end-1]; markersize = 1, markerstrokewidth = 0))
 
 plot([Plots.heatmap(W, clim = (0, 1e-2)) for W in W_quad_all]...; colorbar = false)
 plot([Plots.heatmap(W, clim = (0, 1e-2)) for W in W_ent_all]...; colorbar = false)

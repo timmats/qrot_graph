@@ -1,0 +1,17 @@
+using Pkg
+Pkg.activate(".")
+using OptimalTransport
+using Plots
+using LinearAlgebra
+using Random
+using Distributions
+using Distances
+using Graphs
+using SimpleWeightedGraphs
+using GraphRecipes
+using NearestNeighborDescent
+using SparseArrays
+using ManifoldLearning
+using MultivariateStats
+pyplot()
+
