@@ -18,6 +18,7 @@ function knn_adj(X, k)
     indices, _ = knn_matrices(nndescent(X, k, Euclidean())); 
     A = spzeros(size(X, 2), size(X, 2));
     @inbounds for i = 1:size(A, 1)
+        A[i, i] = 1
         @inbounds for j in indices[:, i]
             A[i, j] = 1
         end
