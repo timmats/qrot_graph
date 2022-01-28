@@ -19,8 +19,8 @@ function spiral(arms; st = 1, ed = 5)
     for i in 1:class_num
         # t = ed * rand(arms[i]).^2 .+ st
         # sample w.r.t arclength
-        # unitrange = collect(range(0., 1.; length = arms[i]))
-        unitrange = rand(arms[i])
+        unitrange = collect(range(0., 1.; length = arms[i]))
+        # unitrange = rand(arms[i])
         t = Linv.((L(ed)-L(st))*unitrange .+ L(st))
         sort!(t)
         #Plug into the parametrization for the spiral

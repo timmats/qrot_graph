@@ -9,7 +9,8 @@ using Distances
 using Graphs
 using SimpleWeightedGraphs
 using GraphRecipes
-using NearestNeighborDescent
+# using NearestNeighborDescent
+using NearestNeighbors
 using SparseArrays
 using ManifoldLearning
 using MultivariateStats
@@ -19,26 +20,30 @@ pyplot()
 
 include("ssl_util.jl")
 
+Random.seed!(0)
+
 ENV["JULIA_DEBUG"] = ""
 include("util.jl")
-# compute embedding and noise
-m = 100
-R = qr(randn(m, m)).Q[:, 1:2]
-η = randn(size(X))
-η = η ./ [norm(x) for x in eachrow(η)]
 
-N_tot = nothing
-N_branch = 6
+N_branch = 10
 # round.(Int, N_tot * (0.1/N_branch .+ 0.9rand(Dirichlet(1e6*ones(N_branch)))))
 # nums = vcat([[125, 125, ] for _ in 1:3]...)
-nums = vcat([[50, 200, ] for _ in 1:3]...)
-nums
+nums = vcat([[150, 150, ] for _ in 1:N_branch÷2]...)
+N_tot = sum(Int, nums)
 
+# compute embedding and noise
 X_orig, T, labels_all = spiral(nums)
+
+m = 100
+R = qr(randn(m, m)).Q[:, 1:2]
+η = randn(N_tot, m)
+η = η ./ [norm(x) for x in eachrow(η)]
+η = reshape(1 .- sin.(3T).^4, :, 1).*η
+
 X = X_orig*R'
 X .+= 0.5*η 
 
-label_frac = 0.05
+label_frac = 0.025
 # label_idx = randperm(length(labels_all))[1:
 sample_frac(x, f) = x[randperm(length(x))[1:ceil(Int, f*length(x))]]
 label_idx = vcat([sample_frac((1:length(labels_all))[labels_all .== l], label_frac) for l = 1:maximum(labels_all)]...)
@@ -56,8 +61,10 @@ cmap_inc_grey = pushfirst!([RGBA(i) for i in cgrad(:seaborn_bright)], RGBA(0.5, 
 cmap = cmap_inc_grey[2:end]
 
 using MultivariateStats
-pca = fit(PCA, X'; maxoutdim = 25)
+pca = MultivariateStats.fit(PCA, X'; maxoutdim = 3)
 X_pca = transform(pca, X')'
+
+scatter(X_pca[:, 1], X_pca[:, 2])
 
 #=
 plot(scatter(X_pca[:, 1], X_pca[:, 2]; markerstrokewidth = 0, group = labels_all, palette = cmap, title = "True"), 
@@ -71,9 +78,9 @@ plot(scatter(X_pca[:, 1], X_pca[:, 2]; markerstrokewidth = 0, group = labels_all
 ## grid search for this example
 
 using ProgressMeter
-ε_all_quad = exp10.(range(-2, 1; length = 25))
-ε_all = exp10.(range(-3, 0; length = 25))
-k_all = round.(Int, range(1, 50; length = 10))
+ε_all_quad = exp10.(range(-2, 0; length = 25))
+ε_all = exp10.(range(-3, -1; length = 25))
+k_all = round.(Int, range(1, 10; length = 10))
 acc_knn = @showprogress [map(ε -> 1-err_norm(LLGC(norm_kernel(form_kernel(X', ε; k = k), :row), labels_all, label_idx, 1.0)[1], labels_all), ε_all) for k in k_all]
 acc_quad = @showprogress map(ε -> 1-err_norm(LLGC(kernel_ot_quad(X', ε), labels_all, label_idx, 1.0)[1], labels_all), ε_all_quad)
 
@@ -87,7 +94,39 @@ scatter!(X_pca[label_idx, 1], X_pca[label_idx, 2]; markerstrokewidth = 0, marker
 plt = plot(plt_labels, 
     plot(ε_all_quad, acc_quad; xaxis = :log10, ylim = (0., 1.05), title = "Quadratic OT", m = "o", legend = nothing, xlabel = "ε", ylabel = "avg class accuracy"), 
      plot(ε_all, acc_knn; xaxis = :log10, ylim = (0., 1.05), title = "kNN + Gaussian", palette = :tab10, m = "o", legend = :outerright, label = reshape(map(k -> "k = $k", k_all), 1, :), xlabel = "ε", ylabel = "avg class accuracy"), markerstrokewidth = 0, layout = (1, 3), size = (750, 250))
-savefig(plt, "ssl_density_even.pdf")
+savefig(plt, "ssl_density_uneven.pdf")
+
+using Graphs, GraphPlot
+using Cairo, Fontconfig
+using Gadfly, Compose
+
+function edgecols(A; q = 0.95, cmax = 0.8)
+    B = A - Diagonal(diag(A))
+    q = map(x -> quantile(x[x .> 0], q), eachrow(B))
+    vcat([[RGBA(0, 0, 0, cmax*f/r) for f in x[x .> 0]] for (x, r) in zip(eachrow(B), q)]...)
+end
+
+function thresh_quantile(x, q)
+    x[x .< quantile(vec(x), q)] .= 0
+    return x
+end
+q_degree(x, q) = degree(SimpleWeightedGraph(thresh_quantile(x, q)))
+
+W_quad_best = kernel_ot_quad(X', ε_all_quad[argmax(acc_quad)]; diag_inf = false)
+l = LLGC(W_quad_best, labels_all, label_idx, 1.0)[1]
+g = SimpleWeightedGraph(symm(W_quad_best))
+A_thresh = sparse(Matrix(adjacency_matrix(g)))
+draw(PDF("ssl_graph_best_quad.pdf", 5cm, 5cm), gplot(g, X_pca[:, 1], X_pca[:, 2]; NODESIZE = 0.015, nodefillc = cmap[l], edgestrokec = edgecols(A_thresh), edgelinewidth = 0.5))
+
+
+W_knn_best = norm_kernel(form_kernel(X', 0.01; k = 5), :row)
+l = LLGC(W_knn_best, labels_all, label_idx, 1.0)[1]
+g = SimpleWeightedGraph(symm(W_knn_best))
+A_thresh = sparse(Matrix(adjacency_matrix(g)))
+draw(PDF("ssl_graph_best_knn.pdf", 5cm, 5cm), gplot(g, X_pca[:, 1], X_pca[:, 2]; NODESIZE = 0.015, nodefillc = cmap[l], edgestrokec = edgecols(A_thresh), edgelinewidth = 0.5))
+
+scatter(X[:, 1], X[:, 2], X[:, 3]; group = labels_all)
+
 
 #= grid search part
 

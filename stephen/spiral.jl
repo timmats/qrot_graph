@@ -9,7 +9,8 @@ using Distances
 using Graphs
 using SimpleWeightedGraphs
 using GraphRecipes
-using NearestNeighborDescent
+# using NearestNeighborDescent
+using NearestNeighbors
 using SparseArrays
 using ManifoldLearning
 using MultivariateStats
@@ -56,7 +57,7 @@ histogram(l)
 
 scatter(collect(eachcol(vcat(f.(θ_range)...)))...)
 
-k_vals = [5, 10, 15, 20, 25,]
+k_vals = [1, 2, 3, 4, 5, 10, 15, 20, 25, 50]
 
 using PyCall
 magic = pyimport("magic")
@@ -84,7 +85,7 @@ Plots.plot([scatter(collect(eachcol(x[:, end-2:end-1]))...; alpha = 0.1) for x i
 
 Plots.plot([scatter(collect(eachcol(x[:, end-2:end-1]))...; alpha = 0.1) for x in W_all_decomp["ent"]]...; axis = nothing, legend = nothing, markersize = 1, ylim = (-0.1, 0.1), xlim = (-0.1, 0.1), plot_title = "Entropic", size = (500, 500))
 
-Plots.plot([scatter(collect(eachcol(x[:, end-2:end-1]))...; alpha = 0.1) for x in W_all_decomp["knn_15"]]...; axis = nothing, legend = nothing, markersize = 1, ylim = (-0.1, 0.1), xlim = (-0.1, 0.1), plot_title = "kNN + Gaussian", size = (500, 500))
+Plots.plot([scatter(collect(eachcol(x[:, end-2:end-1]))...; alpha = 0.1) for x in W_all_decomp["knn_5"]]...; axis = nothing, legend = nothing, markersize = 1, ylim = (-0.1, 0.1), xlim = (-0.1, 0.1), plot_title = "kNN + Gaussian", size = (500, 500))
 
 Plots.plot([scatter(collect(eachcol(x[:, end-2:end-1]))...; alpha = 0.1) for x in W_all_decomp["row"]]...; axis = nothing, legend = nothing, markersize = 1, ylim = (-0.1, 0.1), xlim = (-0.1, 0.1), plot_title = "Gaussian", size = (500, 500))
 

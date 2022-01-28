@@ -2,10 +2,11 @@ using Distances
 
 function get_cost(X; diag_inf = false)
     C = pairwise(SqEuclidean(), X, X)
+    C = mean_norm(C)
     if diag_inf
         C[diagind(C)] .= Inf
     end
-    mean_norm(C)
+    C
 end
 
 mean_norm(x) = x ./ mean(x)
@@ -15,11 +16,12 @@ kernel_ot_ent = (X, ε; diag_inf = false, rtol = 1e-6, atol = 1e-9) -> symm(sink
 kernel_ot_quad = (X, ε; diag_inf = false, rtol = 1e-6, atol = 1e-9) -> symm(quadreg(ones(size(X, 2)), get_cost(X; diag_inf = diag_inf), ε, OptimalTransport.SymmetricQuadraticOTNewton(); maxiter = 100, atol = atol, rtol = rtol))
 
 function knn_adj(X, k)
-    indices, _ = knn_matrices(nndescent(X, k, Euclidean())); 
+    # indices, _ = knn_matrices(nndescent(X, k, Euclidean())); 
+    indices, _ = knn(KDTree(X), X, k);
     A = spzeros(size(X, 2), size(X, 2));
     @inbounds for i = 1:size(A, 1)
         A[i, i] = 1
-        @inbounds for j in indices[:, i]
+        @inbounds for j in indices[i]
             A[i, j] = 1
         end
     end
