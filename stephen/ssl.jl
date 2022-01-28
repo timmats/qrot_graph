@@ -85,16 +85,16 @@ acc_knn = @showprogress [map(ε -> 1-err_norm(LLGC(norm_kernel(form_kernel(X', �
 acc_quad = @showprogress map(ε -> 1-err_norm(LLGC(kernel_ot_quad(X', ε), labels_all, label_idx, 1.0)[1], labels_all), ε_all_quad)
 
 unlabelled_idx = symdiff(label_idx, 1:length(labels_all))
-plt_labels = scatter(X_pca[unlabelled_idx, 1], X_pca[unlabelled_idx, 2]; markercolor = cmap[labels_all[unlabelled_idx]], markeralpha = 0.5, markersize = 2.5, markerstrokewidth = 0, legend = nothing, aspectratio = :equal)
-scatter!(X_pca[label_idx, 1], X_pca[label_idx, 2]; markerstrokewidth = 0, markercolor = cmap[labels_all[label_idx]], title = "Data", markersize = 5)
+scatter(X_pca[unlabelled_idx, 1], X_pca[unlabelled_idx, 2]; markercolor = cmap[labels_all[unlabelled_idx]], markeralpha = 0.5, markersize = 2.5, markerstrokewidth = 0, legend = nothing, aspectratio = :equal, ticks = false, showaxis = false)
+scatter!(X_pca[label_idx, 1], X_pca[label_idx, 2]; markerstrokewidth = 0, markercolor = cmap[labels_all[label_idx]], title = "Input data", markersize = 5)
 
 # plt_labels = scatter(X_pca[unlabelled_idx, 1], X_pca[unlabelled_idx, 2]; markeralpha = 0.175, markerstrokewidth = 0, legend = nothing, aspectratio = :equal)
 # scatter!(X_pca[label_idx, 1], X_pca[label_idx, 2]; markerstrokewidth = 0, title = "Data", markersize = 5)
 
-plt = plot(plt_labels, 
-    plot(ε_all_quad, acc_quad; xaxis = :log10, ylim = (0., 1.05), title = "Quadratic OT", m = "o", legend = nothing, xlabel = "ε", ylabel = "avg class accuracy"), 
-     plot(ε_all, acc_knn; xaxis = :log10, ylim = (0., 1.05), title = "kNN + Gaussian", palette = :tab10, m = "o", legend = :outerright, label = reshape(map(k -> "k = $k", k_all), 1, :), xlabel = "ε", ylabel = "avg class accuracy"), markerstrokewidth = 0, layout = (1, 3), size = (750, 250))
-savefig(plt, "ssl_density_uneven.pdf")
+plt = plot(plot(ε_all_quad, acc_quad; xaxis = :log10, ylim = (0., 1.05), title = "Quadratic OT", m = "o", legend = nothing, xlabel = "ε", ylabel = "avg class accuracy"), 
+     plot(ε_all, acc_knn; xaxis = :log10, ylim = (0., 1.05), title = "kNN + Gaussian", palette = :tab10, m = "o", legend = :outerright, label = reshape(map(k -> "k = $k", k_all), 1, :), xlabel = "ε", ylabel = "accuracy"), markerstrokewidth = 0, size = (500, 250))
+savefig(plt, "ssl_A.pdf")
+
 
 using Graphs, GraphPlot
 using Cairo, Fontconfig
@@ -116,14 +116,14 @@ W_quad_best = kernel_ot_quad(X', ε_all_quad[argmax(acc_quad)]; diag_inf = false
 l = LLGC(W_quad_best, labels_all, label_idx, 1.0)[1]
 g = SimpleWeightedGraph(symm(W_quad_best))
 A_thresh = sparse(Matrix(adjacency_matrix(g)))
-draw(PDF("ssl_graph_best_quad.pdf", 5cm, 5cm), gplot(g, X_pca[:, 1], X_pca[:, 2]; NODESIZE = 0.015, nodefillc = cmap[l], edgestrokec = edgecols(A_thresh), edgelinewidth = 0.5))
+draw(PDF("ssl_graph_best_quad.pdf", 5cm, 5cm), gplot(g, X_pca[:, 1], X_pca[:, 2]; NODESIZE = 0.015, nodefillc = cmap[l], edgestrokec = edgecols(A_thresh), EDGELINEWIDTH = 0.25))
 
 
 W_knn_best = norm_kernel(form_kernel(X', 0.01; k = 5), :row)
 l = LLGC(W_knn_best, labels_all, label_idx, 1.0)[1]
 g = SimpleWeightedGraph(symm(W_knn_best))
 A_thresh = sparse(Matrix(adjacency_matrix(g)))
-draw(PDF("ssl_graph_best_knn.pdf", 5cm, 5cm), gplot(g, X_pca[:, 1], X_pca[:, 2]; NODESIZE = 0.015, nodefillc = cmap[l], edgestrokec = edgecols(A_thresh), edgelinewidth = 0.5))
+draw(PDF("ssl_graph_best_knn.pdf", 5cm, 5cm), gplot(g, X_pca[:, 1], X_pca[:, 2]; NODESIZE = 0.015, nodefillc = cmap[l], edgestrokec = edgecols(A_thresh), EDGELINEWIDTH = 0.25))
 
 scatter(X[:, 1], X[:, 2], X[:, 3]; group = labels_all)
 
