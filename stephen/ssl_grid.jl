@@ -37,7 +37,7 @@ end
 N_vals = round.(Int, range(50, 250; length = 10) )
 X_all = [gen_data(N = N, N_branch = 10) for N in N_vals]
 ε_all_quad = exp10.(range(-3, 1; length = 10))
-k_all = round.(Int, range(5, 50; length = 10))
+k_all = 
 
 l_quad_all = [@showprogress [LLGC(kernel_ot_quad(X[1]', ε), X[2], X[3], 1.0)[1] for ε in ε_all_quad] for X in X_all]
 

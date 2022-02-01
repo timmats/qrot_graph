@@ -55,7 +55,7 @@ l = [quadgk(t -> norm(ForwardDiff.derivative(f, t)), 0, tfinal, rtol = 1e-8)[1] 
 l[2:end].-l[1:end-1] # check we are sampling w.r.t. arclength
 histogram(l)
 
-scatter(collect(eachcol(vcat(f.(θ_range)...)))...)
+scatter(collect(eachcol(vcat(f.(θ_range)...)))...; marker_z = θ_range, color = :gist_rainbow, markerstrokewidth = 0, colorbar = nothing, legend = nothing)
 
 k_vals = [1, 2, 3, 4, 5, 10, 15, 20, 25, 50]
 
@@ -127,11 +127,11 @@ end
 err_all = Dict(k => map(W -> geterr(W_ref_decomp[:, end-10:end-1], W[:, end-10:end-1]), x) for (k, x) in W_all_decomp)
 err_magic = Dict(k => geterr(W_ref_decomp[:, end-10:end-1], real.(eigen(op.diff_op.todense()).vectors[:, end-10:end-1])) for (k, op) in zip(k_vals, magic_op_all))
 
-Plots.plot(W_all["quad"][1], err_all["quad"], xscale = :log10, label = "Quad", palette = :Set1_9, legend = :outerright, xlabel = "ε", ylabel = "⟨ cos(θ) ⟩", color = :blue, m = "o", markerstrokewidth = 0, size = (500, 250))
-Plots.plot!(W_all["ent"][1], err_all["ent"]; label = "Ent", color = :green, m = "o", markerstrokewidth = 0)
-Plots.plot!(W_all["row"][1], err_all["row"]; label = "Gauss", color = :orange, m = "o", markerstrokewidth = 0)
+Plots.plot(W_all["quad"][1], err_all["quad"], xscale = :log10, label = "Quadratic OT", palette = :Set1_9, legend = :outerright, xlabel = "ε", ylabel = "⟨θ⟩", color = :blue, m = "o", markerstrokewidth = 0, size = (500, 250))
+Plots.plot!(W_all["ent"][1], err_all["ent"]; label = "Entropic OT", color = :green, m = "o", markerstrokewidth = 0)
+Plots.plot!(W_all["row"][1], err_all["row"]; label = "Gaussian", color = :orange, m = "o", markerstrokewidth = 0)
 # [Plots.plot!(W_all["knn_$k"][1], err_all["knn_$k"], label = "kNN_$k") for k in k_vals]
-Plots.plot!(W_all["knn_5"][1], minimum(hcat([err_all["knn_$k"] for k in k_vals]...); dims = 2); label = "kNN_best", color = :red, m = "o", markerstrokewidth = 0)
+Plots.plot!(W_all["knn_5"][1], minimum(hcat([err_all["knn_$k"] for k in k_vals]...); dims = 2); label = "kNN+Gaussian_best", color = :red, m = "o", markerstrokewidth = 0)
 # [hline!([err_magic[k], ], label = "MAGIC_$k") for k in k_vals]
 hline!([last(minimum(values(err_magic))), ]; label = "MAGIC_best", color = :black)
 
@@ -154,11 +154,11 @@ Plots.plot(Plots.plot(θ_range, W_all_decomp["quad"][argmin(err_all["quad"])][:,
      Plots.plot(θ_range, real.(eigen(W_ref).vectors[:, end-3:end-1]); alpha = 1, markerstrokewidth = 0, title = "True"); legend = nothing)
 
 k=10
-Plots.plot(Plots.scatter(collect(eachcol(W_all_decomp["quad"][argmin(err_all["quad"])][:, end-2:end-1]))...; alpha = 0.05, title = "Quadratic", marker_z = θ_range, color = :gist_rainbow),
-     Plots.scatter(collect(eachcol(W_all_decomp["ent"][argmin(err_all["ent"])][:, end-2:end-1]))...; alpha = 0.05, title = "Entropic", marker_z = θ_range, color = :gist_rainbow), 
-     Plots.scatter(collect(eachcol(W_all_decomp["knn_$k"][argmin(err_all["knn_$k"])][:, end-2:end-1]))...; alpha = 0.05, title = "kNN_$k", marker_z = θ_range, color = :gist_rainbow), 
+Plots.plot(Plots.scatter(collect(eachcol(W_all_decomp["quad"][argmin(err_all["quad"])][:, end-2:end-1]))...; alpha = 0.05, title = "Quadratic OT", marker_z = θ_range, color = :gist_rainbow),
+     Plots.scatter(collect(eachcol(W_all_decomp["ent"][argmin(err_all["ent"])][:, end-2:end-1]))...; alpha = 0.05, title = "Entropic OT", marker_z = θ_range, color = :gist_rainbow), 
+     Plots.scatter(collect(eachcol(W_all_decomp["knn_$k"][argmin(err_all["knn_$k"])][:, end-2:end-1]))...; alpha = 0.05, title = "kNN+Gauss, k=$k", marker_z = θ_range, color = :gist_rainbow), 
      Plots.scatter(collect(eachcol(W_all_decomp["row"][argmin(err_all["row"])][:, end-2:end-1]))...; alpha = 0.05, title = "Gaussian", marker_z = θ_range, color = :gist_rainbow),
-     Plots.scatter(collect(eachcol(real.(eigen(magic_op_all[k_vals .== k][1].diff_op.todense()).vectors[:, end-2:end-1])))...; alpha = 0.05, title = "MAGIC_$k", marker_z = θ_range, color = :gist_rainbow),
+     Plots.scatter(collect(eachcol(real.(eigen(magic_op_all[k_vals .== k][1].diff_op.todense()).vectors[:, end-2:end-1])))...; alpha = 0.05, title = "MAGIC, k=$k", marker_z = θ_range, color = :gist_rainbow),
      Plots.scatter(collect(eachcol(real.(eigen(W_ref).vectors[:, end-2:end-1])))...; alpha = 0.05, title = "True", marker_z = θ_range, color = :gist_rainbow); legend = nothing, markersize = 4, markerstrokewidth = 0, colorbar = nothing, color = :viridis, xaxis = nothing, yaxis = nothing)
 
 using Graphs, GraphPlot
