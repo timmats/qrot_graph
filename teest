@@ -1,0 +1,9 @@
+using Statistics
+using Distances
+using OptimalTransport
+
+θ_vals = range(-π, π; length = 250)
+X = mapreduce(θ -> [cos(θ), sin(θ)], hcat, θ_vals)
+C = pairwise(SqEuclidean(), X)
+C /= mean(C)
+
