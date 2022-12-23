@@ -14,6 +14,8 @@ mean_norm(x) = x ./ mean(x)
 symm(A) = 0.5*(A.+A')
 kernel_ot_ent = (X, ε; diag_inf = false, rtol = 1e-6, atol = 1e-9) -> symm(sinkhorn(ones(size(X, 2)), get_cost(X; diag_inf = diag_inf), ε, OptimalTransport.SymmetricSinkhornGibbs(); maxiter = 5_000, rtol = rtol, atol = atol))
 kernel_ot_quad = (X, ε; diag_inf = false, rtol = 1e-6, atol = 1e-9) -> symm(quadreg(ones(size(X, 2)), get_cost(X; diag_inf = diag_inf), ε, OptimalTransport.SymmetricQuadraticOTNewton(); maxiter = 100, atol = atol, rtol = rtol))
+kernel_epanech = (X, ε; diag_inf = false, rtol = 1e-6, atol = 1e-9) -> symm(relu.(1 .- get_cost(X; diag_inf = diag_inf)/ε))
+
 
 function knn_adj(X, k)
     # indices, _ = knn_matrices(nndescent(X, k, Euclidean())); 

@@ -68,11 +68,11 @@ X_embed_magic_all = [op.fit_transform(X_embed', genes = "all_genes")' for op in 
 ε_all_quad = 10f0.^range(-1.5, 1.5; length = 25)
 ε_all = 10f0.^range(-2, 1; length = 25)
 
-W_all = Dict(k => (x, [f(X_embed, ε) for ε in x]) for (k, f, x) in zip(["quad", "ent", ["knn_$k" for k in k_vals]..., "row"],
-                                                                       [kernel_ot_quad, kernel_ot_ent,
+W_all = Dict(k => (x, [f(X_embed, ε) for ε in x]) for (k, f, x) in zip(["quad", "ent", "epanech", ["knn_$k" for k in k_vals]..., "row"],
+                                                                       [kernel_ot_quad, kernel_ot_ent,kernel_epanech,
                                                                        [(x, ε) -> norm_kernel(form_kernel(x, ε; k = k), :row) for k in k_vals]...,
                                                                         (x, ε) -> norm_kernel(form_kernel(x, ε; k = Inf), :row)],
-                                                                       [ε_all_quad, [ε_all for _ in k_vals]..., ε_all, ε_all]))
+                                                                       [ε_all_quad, ε_all, ε_all_quad, [ε_all for _ in k_vals]..., ε_all]))
 
 W_all_decomp = Dict(k => [real.(eigen(y).vectors) for y in x] for (k, (_, x)) in W_all)
 
@@ -82,6 +82,8 @@ W_ref_decomp = real.(eigen(W_ref).vectors)
 scatter(collect(eachcol(W_ref_decomp[:, end-2:end-1]))...; aspect_ratio = :equal, title = "Reference", alpha = 0.25, markersize = 4, marker_z = θ_range, color = :gist_rainbow, legend = nothing, markerstrokewidth = 0)
 
 Plots.plot([scatter(collect(eachcol(x[:, end-2:end-1]))...; alpha = 0.1) for x in W_all_decomp["quad"]]...; axis = nothing, legend = nothing, markersize = 1, ylim = (-0.1, 0.1), xlim = (-0.1, 0.1), plot_title = "Quadratic", size = (500, 500))
+
+Plots.plot([scatter(collect(eachcol(x[:, end-2:end-1]))...; alpha = 0.1) for x in W_all_decomp["epanech"]]...; axis = nothing, legend = nothing, markersize = 1, ylim = (-0.1, 0.1), xlim = (-0.1, 0.1), plot_title = "Epanech", size = (500, 500))
 
 Plots.plot([scatter(collect(eachcol(x[:, end-2:end-1]))...; alpha = 0.1) for x in W_all_decomp["ent"]]...; axis = nothing, legend = nothing, markersize = 1, ylim = (-0.1, 0.1), xlim = (-0.1, 0.1), plot_title = "Entropic", size = (500, 500))
 
